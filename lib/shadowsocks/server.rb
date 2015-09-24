@@ -11,7 +11,7 @@ module Shadowsocks
       end
 
       def receive_data data
-        server.send_data encrypt(data)
+        server.send_data package.pack_hmac(encrypt(package.pack_timestamp_and_crc(data)))
         outbound_scheduler
       end
     end
@@ -20,13 +20,21 @@ module Shadowsocks
       private
 
       def data_handler data
+        datas = []
         begin
-          data = decrypt data
+          package.push(data)
+          package.pop.each do |i|
+            d = package.unpack_timestamp_and_crc(decrypt(package.unpack_hmac(i)))
+            datas.push d
+          end
         rescue Exception => e
           warn e
           connection_cleanup
         end
+        datas.each { |i| handle_stage(i) }
+      end
 
+      def handle_stage(data)
         case stage
         when 0
           fireup_tunnel data
@@ -47,7 +55,7 @@ module Shadowsocks
             cached_pieces.push data[header_length, data.size]
           end
 
-          @connector = EventMachine.connect @remote_addr, @remote_port, RequestConnector, self, crypto
+          @connector = EventMachine.connect @remote_addr, @remote_port, RequestConnector, self, crypto, package
         rescue Exception => e
           warn e
           connection_cleanup

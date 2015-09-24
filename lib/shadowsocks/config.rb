@@ -2,7 +2,7 @@ require 'json'
 
 module Shadowsocks
   class Config
-    attr_reader :args, :server, :server_port, :local_port, :password, :timeout, :method, :config_path, :chnroutes
+    attr_reader :args, :server, :server_port, :local_port, :password, :timeout, :method, :config_path
 
     def initialize(_args)
       @args = _args || []
@@ -23,7 +23,6 @@ module Shadowsocks
       @local_port   = json["local_port"].to_i  if @local_port.nil?
       @timeout      = json["timeout"].to_i     if @timeout.nil?
       @method       = json["method"]           if @method.nil?
-      @chnroutes    = json["chnroutes"]        if @chnroutes.nil?
     end
 
     private
@@ -42,7 +41,6 @@ module Shadowsocks
         opts.on("-l", "--local_port PORT", Integer, "Local client port")                             { |c| @local_port  = c }
         opts.on("-m", "--method METHOD", "Encryption method")                                        { |c| @method      = c }
         opts.on("-t", "--timeout NUMBER", Integer, "connection timeout")                             { |c| @timeout     = c }
-        opts.on("-d", "--detect", "chnroutes feature")                                               { |c| @chnroutes   = c }
 
         opts.on_tail("-v", "--version", "Show shadowsocks gem version")                              { puts Shadowsocks::VERSION; exit }
         opts.on_tail("-h", "--help", "Show this message")                                            { puts opts; exit }

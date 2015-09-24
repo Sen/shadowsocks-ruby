@@ -4,6 +4,5 @@
     "local_port":1080,
     "password":"barfoo!",
     "timeout":60,
-    "method":"aes-128-cfb",
-    "chnroutes":true
+    "method":"aes-128-cfb"
 }

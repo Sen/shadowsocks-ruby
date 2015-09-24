@@ -12,7 +12,6 @@ module Shadowsocks
     def initialize(options)
       @side        = options[:side]
       @config      = options[:config]
-      @ip_detector = Shadowsocks::IPDetector.new if @config.chnroutes
 
       @method_options = {
         method:   config.method,
@@ -59,7 +58,7 @@ module Shadowsocks
       connection.crypto                  = Shadowsocks::Crypto.new @method_options
       connection.pending_connect_timeout = @config.timeout
       connection.comm_inactivity_timeout = @config.timeout
-      connection.ip_detector             = @ip_detector if @config.chnroutes
+      connection.package                 = Shadowsocks::Package.new(password: @config.password)
     end
   end
 end
