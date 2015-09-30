@@ -39,11 +39,18 @@ module Shadowsocks
     end
 
     def pack_timestamp_and_crc(buf)
+      rand_len = rand(1..255)
+      rand_str  = ''
+
+      1.upto(rand_len).each do
+        rand_str += rand(0..255).chr
+      end
+
       buf_len   = i_to_bytes(buf.length)
       timestamp = i_to_bytes(Time.now.to_i)
       crc       = i_to_bytes(Zlib.crc32(timestamp + buf))
 
-      buf_len + buf + timestamp + crc
+      rand_len.chr + rand_str + buf_len + buf + timestamp + crc
     end
 
     def pack_hmac(buf)
@@ -58,14 +65,15 @@ module Shadowsocks
     end
 
     def unpack_timestamp_and_crc(buf)
-      buf_len   = bytes_to_i(buf[0..3])
-      real_buf  = buf[4..3+buf_len]
+      rand_len  = buf[0].ord
+      buf_len   = bytes_to_i(buf[rand_len + 1..rand_len + 4])
+      real_buf  = buf[rand_len + 5..rand_len + 4 + buf_len]
 
-      timestamp = buf[4+buf_len..7+buf_len]
-      crc32     = bytes_to_i(buf[8+buf_len..-1])
+      timestamp = buf[rand_len + 5 + buf_len..rand_len + 8 + buf_len]
+      crc32     = bytes_to_i(buf[rand_len + 9 + buf_len..-1])
 
       raise PackageCrcInvalid if Zlib.crc32(timestamp + real_buf) != crc32
-      raise PackageTimeout if Time.at(bytes_to_i(timestamp)) < (Time.now - 60)
+      raise PackageTimeout if Time.at(bytes_to_i(timestamp)) < (Time.now - 180)
 
       real_buf
     end

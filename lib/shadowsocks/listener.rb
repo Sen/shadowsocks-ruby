@@ -11,11 +11,11 @@ module Shadowsocks
     def post_init
       @stage = 0
       @cached_pieces = []
-      puts "A client has connected..."
+      # puts "A client has connected..."
     end
 
     def unbind
-      puts "A client has left..."
+      # puts "A client has left..."
       connection_cleanup
     end
 

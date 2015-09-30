@@ -2,7 +2,7 @@ module Shadowsocks
   module Local
     class ServerConnector < ::Shadowsocks::Tunnel
       def post_init
-        p "connecting #{server.remote_addr[3..-1]} via #{server.config.server}"
+        puts "connecting #{server.remote_addr[3..-1]} via #{server.config.server}"
         addr_to_send = server.addr_to_send.clone
 
         send_data package.pack_hmac(encrypt(package.pack_timestamp_and_crc(addr_to_send)))
@@ -15,7 +15,13 @@ module Shadowsocks
       def receive_data data
         package.push(data)
         package.pop.each do |i|
-          server.send_data package.unpack_timestamp_and_crc(decrypt(package.unpack_hmac(i)))
+          begin
+            server.send_data package.unpack_timestamp_and_crc(decrypt(package.unpack_hmac(i)))
+          rescue BufLenInvalid, HmacInvalid, PackageInvalid, PackageTimeout, PackageCrcInvalid => e
+            warn e
+            self.close_connection
+            server.close_connection
+          end
         end
         outbound_scheduler
       end

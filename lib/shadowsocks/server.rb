@@ -2,7 +2,7 @@ module Shadowsocks
   module Server
     class RequestConnector < ::Shadowsocks::Tunnel
       def post_init
-        p "connecting #{server.remote_addr}:#{server.remote_port} via #{server.config.server}"
+        puts "connecting #{server.remote_addr}:#{server.remote_port} via #{server.config.server}"
 
         server.cached_pieces.each { |piece| send_data piece }
         server.cached_pieces = nil
