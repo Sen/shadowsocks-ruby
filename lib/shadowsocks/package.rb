@@ -54,7 +54,7 @@ module Shadowsocks
     end
 
     def pack_hmac(buf)
-      digest   = OpenSSL::Digest.new('sha1')
+      digest   = OpenSSL::Digest.new('sha256')
       hmac     = OpenSSL::HMAC.hexdigest(digest, password, buf)
       hmac_len = i_to_bytes(hmac.length)
 
@@ -92,7 +92,7 @@ module Shadowsocks
 
       raise PackageInvalid if hmac_len != hmac.length
 
-      digest        = OpenSSL::Digest.new('sha1')
+      digest        = OpenSSL::Digest.new('sha256')
       real_buf_hmac = OpenSSL::HMAC.hexdigest(digest, password, real_buf)
 
       raise HmacInvalid if real_buf_hmac != hmac
