@@ -73,7 +73,7 @@ module Shadowsocks
       crc32     = bytes_to_i(buf[rand_len + 9 + buf_len..-1])
 
       raise PackageCrcInvalid if Zlib.crc32(timestamp + real_buf) != crc32
-      raise PackageTimeout if Time.at(bytes_to_i(timestamp)) < (Time.now - 180)
+      raise PackageTimeout if Time.at(bytes_to_i(timestamp)) < (Time.now - 3600)
 
       real_buf
     end
