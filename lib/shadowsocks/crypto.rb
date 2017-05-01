@@ -87,8 +87,8 @@ module Shadowsocks
 
       key, _iv   = EVP_BytesToKey(m[0], m[1])
 
-      iv         = _iv[0..m[1] - 1]
-      @iv        = iv unless @iv
+      iv         = _iv[0..(m[1] - 1)]
+      @iv        = iv
       @cipher_iv = iv if op == 1
 
       cipher = OpenSSL::Cipher.new method
