@@ -40,17 +40,17 @@ module Shadowsocks
 
     def pack(buf)
       if crypto.need_hmac?
-        pack_hmac(encrypt(pack_timestamp(buf)))
+        prepend_pack_len(pack_hmac(encrypt(pack_timestamp(buf))))
       else
-        encrypt(pack_timestamp(buf))
+        prepend_pack_len(encrypt(pack_timestamp(buf)))
       end
     end
 
     def unpack(buf)
       if crypto.need_hmac?
-        unpack_timestamp(decrypt(unpack_hmac(buf)))
+        unpack_timestamp(decrypt(unpack_hmac(remove_pack_len(buf))))
       else
-        unpack_timestamp(decrypt(buf))
+        unpack_timestamp(decrypt(remove_pack_len(buf)))
       end
     end
 
@@ -101,9 +101,9 @@ module Shadowsocks
 
     # packer length + buf length + buf + hmac length + hmac
     def unpack_hmac(buf)
-      packer_len = bytes_to_i(buf[0..3])
+      pack_len = bytes_to_i(buf[0..3])
 
-      raise BufLenInvalid if packer_len != buf[4..-1].length
+      raise BufLenInvalid if pack_len != buf[4..-1].length
 
       buf_len  = bytes_to_i(buf[4..7])
       real_buf = buf[8..8 + buf_len - 1]
@@ -119,6 +119,17 @@ module Shadowsocks
       raise HmacInvalid if real_buf_hmac != hmac
 
       real_buf
+    end
+
+    def prepend_pack_len(buf)
+      i_to_bytes(buf.length) + buf
+    end
+
+    def remove_pack_len(buf)
+      buf_len = bytes_to_i(buf[0..3])
+      raise BufLenInvalid if buf_len != buf[4..-1].length
+
+      buf[4..-1]
     end
 
     private
