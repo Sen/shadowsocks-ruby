@@ -2,24 +2,25 @@ PATH
   remote: .
   specs:
     shadowsocks (0.12)
-      eventmachine (= 1.0.7)
-      ffi (~> 1.9.0)
-      json (~> 1.8.0)
+      eventmachine (= 1.2.5)
+      ffi (~> 1.9.18)
+      json (~> 2.1.0)
+      rbnacl (~> 5.0)
 
 GEM
   remote: http://rubygems.org/
   specs:
-    eventmachine (1.0.7)
-    ffi (1.9.10)
-    json (1.8.3)
-    metaclass (0.0.2)
-    minitest (5.8.1)
+    eventmachine (1.2.5)
+    ffi (1.9.23)
+    json (2.1.0)
+    metaclass (0.0.4)
+    minitest (5.8.5)
     mocha (1.0.0)
       metaclass (~> 0.0.1)
-    rake (10.1.0)
-    rake-compiler (0.9.2)
-      rake
-    timecop (0.8.0)
+    rake (12.3.1)
+    rbnacl (5.0.0)
+      ffi
+    timecop (0.8.1)
 
 PLATFORMS
   ruby
@@ -28,6 +29,8 @@ DEPENDENCIES
   minitest (~> 5.8.1)
   mocha (~> 1.0.0)
   rake
-  rake-compiler (~> 0.9.2)
   shadowsocks!
   timecop (~> 0.8.0)
+
+BUNDLED WITH
+   1.16.1

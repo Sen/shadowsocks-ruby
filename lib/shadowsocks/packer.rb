@@ -3,17 +3,17 @@ require 'zlib'
 
 class BufLenInvalid < StandardError; end
 class HmacInvalid < StandardError; end
-class PackageInvalid < StandardError; end
-class PackageTimeout < StandardError; end
-class PackageCrcInvalid < StandardError; end
+class PackerInvalid < StandardError; end
+class PackerTimeout < StandardError; end
 
 module Shadowsocks
-  class Package
+  class Packer
     attr_accessor :data
-    attr_reader :password
+    attr_reader :password, :crypto
 
     def initialize(options = {})
       @password = options.fetch(:password)
+      @crypto = options.fetch(:crypto)
     end
 
     def push(buf)
@@ -38,7 +38,31 @@ module Shadowsocks
       end
     end
 
-    def pack_timestamp_and_crc(buf)
+    def pack(buf)
+      if crypto.need_hmac?
+        pack_hmac(encrypt(pack_timestamp(buf)))
+      else
+        encrypt(pack_timestamp(buf))
+      end
+    end
+
+    def unpack(buf)
+      if crypto.need_hmac?
+        unpack_timestamp(decrypt(unpack_hmac(buf)))
+      else
+        unpack_timestamp(decrypt(buf))
+      end
+    end
+
+    def encrypt(buf)
+      crypto.encrypt(buf)
+    end
+
+    def decrypt(buf)
+      crypto.decrypt(buf)
+    end
+
+    def pack_timestamp(buf)
       rand_len = rand(1..255)
       rand_str  = ''
 
@@ -48,9 +72,20 @@ module Shadowsocks
 
       buf_len   = i_to_bytes(buf.length)
       timestamp = i_to_bytes(Time.now.to_i)
-      crc       = i_to_bytes(Zlib.crc32(timestamp + buf))
 
-      rand_len.chr + rand_str + buf_len + buf + timestamp + crc
+      rand_len.chr + rand_str + buf_len + buf + timestamp
+    end
+
+    def unpack_timestamp(buf)
+      rand_len  = buf[0].ord
+      buf_len   = bytes_to_i(buf[rand_len + 1..rand_len + 4])
+      real_buf  = buf[rand_len + 5..rand_len + 4 + buf_len]
+
+      timestamp = buf[rand_len + 5 + buf_len..rand_len + 8 + buf_len]
+
+      raise PackerTimeout if Time.at(bytes_to_i(timestamp)) < (Time.now - 3600)
+
+      real_buf
     end
 
     def pack_hmac(buf)
@@ -64,25 +99,11 @@ module Shadowsocks
       i_to_bytes(data.length) + data
     end
 
-    def unpack_timestamp_and_crc(buf)
-      rand_len  = buf[0].ord
-      buf_len   = bytes_to_i(buf[rand_len + 1..rand_len + 4])
-      real_buf  = buf[rand_len + 5..rand_len + 4 + buf_len]
-
-      timestamp = buf[rand_len + 5 + buf_len..rand_len + 8 + buf_len]
-      crc32     = bytes_to_i(buf[rand_len + 9 + buf_len..-1])
-
-      raise PackageCrcInvalid if Zlib.crc32(timestamp + real_buf) != crc32
-      raise PackageTimeout if Time.at(bytes_to_i(timestamp)) < (Time.now - 3600)
-
-      real_buf
-    end
-
-    # package length + buf length + buf + hmac length + hmac
+    # packer length + buf length + buf + hmac length + hmac
     def unpack_hmac(buf)
-      package_len = bytes_to_i(buf[0..3])
+      packer_len = bytes_to_i(buf[0..3])
 
-      raise BufLenInvalid if package_len != buf[4..-1].length
+      raise BufLenInvalid if packer_len != buf[4..-1].length
 
       buf_len  = bytes_to_i(buf[4..7])
       real_buf = buf[8..8 + buf_len - 1]
@@ -90,7 +111,7 @@ module Shadowsocks
       hmac_len = bytes_to_i(buf[8 + buf_len..11+buf_len])
       hmac     = buf[12 + buf_len..-1]
 
-      raise PackageInvalid if hmac_len != hmac.length
+      raise PackerInvalid if hmac_len != hmac.length
 
       digest        = OpenSSL::Digest.new('sha256')
       real_buf_hmac = OpenSSL::HMAC.hexdigest(digest, password, real_buf)

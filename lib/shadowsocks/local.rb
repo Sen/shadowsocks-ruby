@@ -2,22 +2,23 @@ module Shadowsocks
   module Local
     class ServerConnector < ::Shadowsocks::Tunnel
       def post_init
-        puts "connecting #{server.remote_addr[3..-1]} via #{server.config.server}"
+        puts "connecting #{server.remote_addr[3..-1]}"
         addr_to_send = server.addr_to_send.clone
 
-        send_data package.pack_hmac(encrypt(package.pack_timestamp_and_crc(addr_to_send)))
-        server.cached_pieces.each { |piece| send_data package.pack_hmac(encrypt(package.pack_timestamp_and_crc(piece))) }
+        send_data packer.pack(addr_to_send) #packer.pack_hmac(encrypt(packer.pack_timestamp(addr_to_send)))
+        # server.cached_pieces.each { |piece| send_data packer.pack_hmac(encrypt(packer.pack_timestamp(piece))) }
+        server.cached_pieces.each { |piece| send_data packer.pack(piece) }
         server.cached_pieces = []
 
         server.stage = 5
       end
 
       def receive_data data
-        package.push(data)
-        package.pop.each do |i|
+        packer.push(data)
+        packer.pop.each do |i|
           begin
-            server.send_data package.unpack_timestamp_and_crc(decrypt(package.unpack_hmac(i)))
-          rescue BufLenInvalid, HmacInvalid, PackageInvalid, PackageTimeout, PackageCrcInvalid => e
+            server.send_data packer.unpack(i) #packer.unpack_timestamp(decrypt(packer.unpack_hmac(i)))
+          rescue BufLenInvalid, HmacInvalid, PackerInvalid, PackerTimeout => e
             warn e
             self.close_connection
             server.close_connection
@@ -40,7 +41,8 @@ module Shadowsocks
         when 4
           cached_pieces.push data
         when 5
-          connector.send_data(package.pack_hmac(encrypt(package.pack_timestamp_and_crc(data)))) and return
+          #connector.send_data(packer.pack_hmac(encrypt(packer.pack_timestamp(data)))) and return
+          connector.send_data(packer.pack(data)) and return
         end
       end
 
@@ -58,7 +60,7 @@ module Shadowsocks
           @stage = 4
 
           @connector = EM.connect config.server, config.server_port, \
-            ServerConnector, self, crypto, package
+            ServerConnector, self, crypto, packer
 
           if data.size > header_length
             cached_pieces.push data[header_length, data.size]

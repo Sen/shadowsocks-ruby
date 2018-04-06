@@ -11,7 +11,7 @@ module Shadowsocks
       end
 
       def receive_data data
-        server.send_data package.pack_hmac(encrypt(package.pack_timestamp_and_crc(data)))
+        server.send_data packer.pack(data) #packer.pack_hmac(encrypt(packer.pack_timestamp(data)))
         outbound_scheduler
       end
     end
@@ -22,10 +22,9 @@ module Shadowsocks
       def data_handler data
         datas = []
         begin
-          package.push(data)
-          package.pop.each do |i|
-            d = package.unpack_timestamp_and_crc(decrypt(package.unpack_hmac(i)))
-            datas.push d
+          packer.push(data)
+          packer.pop.each do |i|
+            datas.push packer.unpack(i)
           end
         rescue Exception => e
           warn e
@@ -55,7 +54,7 @@ module Shadowsocks
             cached_pieces.push data[header_length, data.size]
           end
 
-          @connector = EventMachine.connect @remote_addr, @remote_port, RequestConnector, self, crypto, package
+          @connector = EM.connect @remote_addr, @remote_port, RequestConnector, self, crypto, packer
         rescue Exception => e
           warn e
           connection_cleanup
@@ -64,4 +63,3 @@ module Shadowsocks
     end
   end
 end
-

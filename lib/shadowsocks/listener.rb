@@ -1,7 +1,7 @@
 module Shadowsocks
   class Listener < ::Shadowsocks::Connection
     attr_accessor :stage, :remote_addr, :remote_port, :addr_to_send, :cached_pieces,
-                  :header_length, :connector, :config, :package
+                  :header_length, :connector, :config, :packer
 
     def receive_data data
       data_handler data

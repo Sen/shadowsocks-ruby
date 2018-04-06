@@ -1,79 +1,68 @@
 require 'securerandom'
 require 'openssl'
-require 'digest/md5'
+require 'digest'
+require 'rbnacl'
 
 module Shadowsocks
   class Crypto
-    include ::Shadowsocks::Table
-
-    attr_accessor :encrypt_table, :decrypt_table, :password, :method,
-                  :cipher, :bytes_to_key_results, :iv_sent
+    attr_accessor :password, :method, :cipher, :bytes_to_key_results, :iv_sent
 
     def initialize(options = {})
       @password = options[:password]
       @method   = options[:method].downcase
-      if method == 'table'
-        @encrypt_table = options[:encrypt_table]
-        @decrypt_table = options[:decrypt_table]
-      elsif method_supported.nil?
+      if method_supported.nil?
         raise "Encrypt method not support"
       end
 
-      if method != 'table' and method != 'none'
+      if method != 'none'
         @cipher = get_cipher(1, SecureRandom.hex(32))
       end
     end
 
     def method_supported
+      # key len, iv len
       case method
-      when 'aes-128-cfb'      then [16, 16]
-      when 'aes-192-cfb'      then [24, 16]
-      when 'aes-256-cfb'      then [32, 16]
-      when 'bf-cfb'           then [16, 8 ]
-      when 'camellia-128-cfb' then [16, 16]
-      when 'camellia-192-cfb' then [24, 16]
-      when 'camellia-256-cfb' then [32, 16]
-      when 'cast5-cfb'        then [16, 8 ]
-      when 'des-cfb'          then [8,  8 ]
-      when 'idea-cfb'         then [16, 8 ]
-      when 'rc2-cfb'          then [16, 8 ]
-      when 'rc4'              then [16, 0 ]
-      when 'seed-cfb'         then [16, 16]
-      when 'none'             then [0,  0]
+      when 'aes-256-gcm'       then [16, 12]
+      when 'chacha20-poly1305' then [32, 16]
+      when 'aes-256-cfb'       then [32, 16]
+      when 'aes-128-cfb'       then [16, 16]
+      when 'none'              then [0,  0]
       end
     end
     alias_method :get_cipher_len, :method_supported
 
+    def need_hmac?
+      !(/chacha|gcm/ =~ method)
+    end
+
+    def need_tag?
+      !need_hmac?
+    end
+
     def encrypt buf
       return buf if buf.length == 0 or method == 'none'
-      if method == 'table'
-        translate @encrypt_table, buf
+
+      if iv_sent
+        @cipher.update(buf)
       else
-        if iv_sent
-          @cipher.update(buf)
-        else
-          @iv_sent = true
-          @cipher_iv + @cipher.update(buf)
-        end
+        @iv_sent = true
+        @cipher_iv + @cipher.update(buf)
       end
     end
 
     def decrypt buf
       return buf if buf.length == 0 or method == 'none'
-      if method == 'table'
-        translate @decrypt_table, buf
-      else
-        if @decipher.nil?
-          decipher_iv_len = get_cipher_len[1]
-          decipher_iv     = buf[0..decipher_iv_len ]
-          @iv             = decipher_iv
-          @decipher       = get_cipher(0, @iv)
-          buf             = buf[decipher_iv_len..-1]
 
-          return buf if buf.length == 0
-        end
-        @decipher.update(buf)
+      if @decipher.nil?
+        decipher_iv_len = get_cipher_len[1]
+        decipher_iv     = buf[0..decipher_iv_len ]
+        @iv             = decipher_iv
+        @decipher       = get_cipher(0, @iv)
+        buf             = buf[decipher_iv_len..-1]
+
+        return buf if buf.length == 0
       end
+      @decipher.update(buf)
     end
 
     private

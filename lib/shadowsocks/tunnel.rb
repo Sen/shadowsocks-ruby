@@ -1,11 +1,11 @@
 module Shadowsocks
   class Tunnel < ::Shadowsocks::Connection
-    attr_accessor :server, :package
+    attr_accessor :server, :packer, :crypto
 
-    def initialize server, crypto, package
+    def initialize server, crypto, packer
       @server  = server
       @crypto  = crypto
-      @package = package
+      @packer = packer
       super
     end
 

@@ -15,11 +15,11 @@ Gem::Specification.new do |s|
   s.license       = 'MIT'
   s.extensions    = %w[ext/encrypt/extconf.rb]
 
-  s.add_dependency "eventmachine", "1.2.3"
+  s.add_dependency "eventmachine", "1.2.5"
   s.add_dependency "json", "~> 2.1.0"
   s.add_dependency "ffi", "~> 1.9.18"
+  s.add_dependency 'rbnacl', '~> 5.0'
 
-  s.add_development_dependency "rake-compiler", "~> 0.9.2"
   s.add_development_dependency "mocha", "~> 1.0.0"
   s.add_development_dependency "rake"
   s.add_development_dependency "minitest", "~> 5.8.1"

@@ -5,8 +5,6 @@ require File.expand_path('../version', __FILE__)
 
 module Shadowsocks
   class Cli
-    include ::Shadowsocks::Table
-
     attr_accessor :side, :args, :config
 
     def initialize(options)
@@ -17,14 +15,6 @@ module Shadowsocks
         method:   config.method,
         password: config.password
       }
-
-      if @config.method == 'table'
-        table = get_table(config.password)
-        @method_options.merge!(
-          encrypt_table: table[:encrypt],
-          decrypt_table: table[:decrypt]
-        )
-      end
     end
 
     def run
@@ -34,7 +24,7 @@ module Shadowsocks
           Signal.trap("INT")  { EventMachine.stop }
           Signal.trap("TERM") { EventMachine.stop }
 
-          puts "*** Local side is up, port:#{config.local_port}"
+          puts "*** Local side is up, local port:#{config.local_port}, remote: #{config.server}:#{config.server_port}"
           puts "*** Hit Ctrl+c to stop"
           EventMachine::start_server "0.0.0.0", config.local_port, Shadowsocks::Local::LocalListener, &method(:initialize_connection)
         }
@@ -54,11 +44,13 @@ module Shadowsocks
     private
 
     def initialize_connection connection
+      crypto = Shadowsocks::Crypto.new @method_options
+
       connection.config                  = @config
-      connection.crypto                  = Shadowsocks::Crypto.new @method_options
+      connection.crypto                  = crypto
       connection.pending_connect_timeout = @config.timeout
       connection.comm_inactivity_timeout = @config.timeout
-      connection.package                 = Shadowsocks::Package.new(password: @config.password)
+      connection.packer                  = Shadowsocks::Packer.new(password: @config.password, crypto: crypto)
     end
   end
 end

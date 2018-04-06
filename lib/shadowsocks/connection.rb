@@ -6,14 +6,6 @@ module Shadowsocks
 
     private
 
-    def encrypt(buf)
-      crypto.encrypt(buf)
-    end
-
-    def decrypt(buf)
-      crypto.decrypt(buf)
-    end
-
     def over_pressure?
       remote.get_outbound_data_size > BackpressureLevel
     end
