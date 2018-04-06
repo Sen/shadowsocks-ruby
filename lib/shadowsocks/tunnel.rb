@@ -5,7 +5,7 @@ module Shadowsocks
     def initialize server, crypto, packer
       @server  = server
       @crypto  = crypto
-      @packer = packer
+      @packer  = packer
       super
     end
 
