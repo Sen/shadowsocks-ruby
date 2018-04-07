@@ -11,7 +11,7 @@ module Shadowsocks
       end
 
       def receive_data data
-        server.send_data packer.pack(data) #packer.pack_hmac(encrypt(packer.pack_timestamp(data)))
+        server.send_data packer.pack(data)
         outbound_scheduler
       end
     end
@@ -26,7 +26,7 @@ module Shadowsocks
           packer.pop.each do |i|
             datas.push packer.unpack(i)
           end
-        rescue Exception => e
+        rescue BufLenInvalid, HmacInvalid, PackerInvalid, PackerTimeout, RbNaCl::CryptoError => e
           warn e
           connection_cleanup
         end

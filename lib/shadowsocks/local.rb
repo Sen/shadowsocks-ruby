@@ -5,8 +5,7 @@ module Shadowsocks
         puts "connecting #{server.remote_addr[3..-1]}"
         addr_to_send = server.addr_to_send.clone
 
-        send_data packer.pack(addr_to_send) #packer.pack_hmac(encrypt(packer.pack_timestamp(addr_to_send)))
-        # server.cached_pieces.each { |piece| send_data packer.pack_hmac(encrypt(packer.pack_timestamp(piece))) }
+        send_data packer.pack(addr_to_send)
         server.cached_pieces.each { |piece| send_data packer.pack(piece) }
         server.cached_pieces = []
 
@@ -17,8 +16,8 @@ module Shadowsocks
         packer.push(data)
         packer.pop.each do |i|
           begin
-            server.send_data packer.unpack(i) #packer.unpack_timestamp(decrypt(packer.unpack_hmac(i)))
-          rescue BufLenInvalid, HmacInvalid, PackerInvalid, PackerTimeout => e
+            server.send_data packer.unpack(i)
+          rescue BufLenInvalid, HmacInvalid, PackerInvalid, PackerTimeout, RbNaCl::CryptoError => e
             warn e
             self.close_connection
             server.close_connection
@@ -41,7 +40,6 @@ module Shadowsocks
         when 4
           cached_pieces.push data
         when 5
-          #connector.send_data(packer.pack_hmac(encrypt(packer.pack_timestamp(data)))) and return
           connector.send_data(packer.pack(data)) and return
         end
       end
